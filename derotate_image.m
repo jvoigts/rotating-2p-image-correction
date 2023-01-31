@@ -1,29 +1,15 @@
 function [I_ur, I_mask] = derotate_image(I,line_angles,rot_center);
 
-line_angles=rad2deg(line_angles);
+line_angles=deg2rad(line_angles);
 
 [Nlines Ncols]=size(I);
 [X,Y] = meshgrid(1:Ncols,1:Nlines);
 
 for t=1:Nlines
-    % add translation offsets
-    %X(t,:)=X(t,:)+ofs(1,t);
-    %Y(t,:)=Y(t,:)+ofs(2,t);
-    
     % add rotation
     [xr yr]=rot(X(t,:), Y(t,:),rot_center,line_angles(t));
     X(t,:)=xr;
     Y(t,:)=yr;
-end;
-
-[Xknown,Yknown] = meshgrid(1:Ncols,1:Nlines);
-
-for t=1:Nlines
-    
-    % add rotation
-    [xr yr]=rot(Xknown(t,:), Yknown(t,:),rot_center,line_angles(t));
-    Xknown(t,:)=xr;
-    Yknown(t,:)=yr;
 end;
 
 
@@ -34,7 +20,7 @@ Y=max(1,min(Y,Nlines));
 %I_t=I_in(sub2ind(size(I_in),round(Y),round(X)));
 
 %better brute force this, but with subsampling
-subs=100;
+subs=5;
 
 igrid=[1:subs:size(X,1),size(X,1)];
 jgrid=[1:subs:size(X,2),size(X,2)];
@@ -44,7 +30,7 @@ pixel_closeness=zeros(Nlines,Ncols);
 
 for i=igrid
     for j=jgrid
-        [d,m] =min( ((Xknown(:)-j).^2 + (Yknown(:)-i).^2) );
+        [d,m] =min( ((X(:)-j).^2 + (Y(:)-i).^2) );
         [Xlow(i,j),Ylow(i,j)] = ind2sub(size(X),m);
         pixel_closeness(i,j) = d;
     end;
@@ -54,7 +40,7 @@ end;
 
 Xh=interp2(xqlow,yqlow,Xlow(igrid,jgrid),Xq,Yq);
 Yh=interp2(xqlow,yqlow,Ylow(igrid,jgrid),Xq,Yq);
-%pixel_closeness_h=interp2(xqlow,yqlow,pixel_closeness(igrid,jgrid),Xq,Yq);
+pixel_closeness_h=interp2(xqlow,yqlow,pixel_closeness(igrid,jgrid),Xq,Yq);
 Xh=max(1,min(Xh,Nlines));
 Yh=max(1,min(Yh,Ncols));
 
@@ -66,4 +52,4 @@ I_ur=interp2(Xq,Yq,I,Yh,Xh,'nearest');
 %I_ur(pixel_closeness_h>(1*subs))=0;
 
 I_mask=1+(I*0);
-%I_mask(pixel_closeness_h>(1*subs))=0;
+I_mask(pixel_closeness_h>(Nlines./subs))=0;
